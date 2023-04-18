@@ -1,0 +1,67 @@
+---
+title: "Machine Learning 1 - Earthquakes"
+author: "Esin, Andrea and Sabrina"
+date: "2023-06-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Requirements group work:
+ - write a nice story
+ - compare methods
+ - Conclusion
+ 
+ Length: no more than 30 pages
+ Deadline: 9 June
+
+
+## Significant Earthquakes
+
+We are looking at the significant earthquakes from 2150 B.C. to 2019. Significant means that at least one of these criteria was fulfilled:
+
+- Damage 1 Million Dollar or more
+
+- 10 or more deaths
+
+- Magnitude of 7.5 or more
+
+- Modified Mercalli Intensity X or greater
+
+- Earthquake generated a tsunami
+
+
+```{r data, message=FALSE, warning=FALSE, include=FALSE}
+
+setwd("C:/Users/A/Documents/FS23_ML1/Project Data/Git_repository/ML01")
+eqdata <- read.csv("significant-earthquake-database.csv", header = TRUE, sep = ";")
+
+head(eqdata)
+mean(eqdata$Intensity, na.rm = TRUE)
+
+
+```
+At first we will have a look at the data provided.
+
+```{r overview}
+head(eqdata)
+summary(eqdata)
+mean(eqdata$Intensity, na.rm = TRUE)
+str(eqdata)
+
+```
+
+
+
+You can also embed plots, for example:
+
+```{r intensity vs deaths, echo=FALSE}
+
+plot(eqdata$Earthquake...Deaths ~ eqdata$Intensity,
+     main = "Intensity against Deaths")
+
+```
+
+
