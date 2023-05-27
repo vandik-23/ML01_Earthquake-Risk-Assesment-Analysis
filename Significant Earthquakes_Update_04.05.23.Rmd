@@ -1,0 +1,1389 @@
+---
+title: "Machine Learning 1 - Statistical Analysis and Prediction of Significant Earthquakes"
+author: "Esin, Andrea and Sabrina"
+date: "2023-06-09"
+output: html_document
+---
+
+# Table of contents
+1. [Introduction](#Introduction)  
+    1.1. [Description of our data](#Description of our data)  
+    1.2. [Getting the data](#Getting the data)  
+    1.3. [Preparing the data](#Preparing the data)  
+2. [Graphical Analysis](#Graphical Analysis)  
+    2.1 [Map of earthquakes](#Map of earthquakes)  
+    2.2 [Plotting continous variables](#Plotting continous variables)  
+    2.3 [Plotting categorical variables](#Plotting categorical variables)  
+3. [Linear Model](#Linear Model)  
+    3.1.[Characteristics of a Linear Model](#Characteristics of a Linear Model)  
+    3.2.[Research Question](#Research Question)  
+    3.3.[Data Cleaning and Graphical Analysis](#Data Cleaning and Graphical Analysis)  
+    3.4.[Fitting the Linear Model](#Fitting the Linear Model)  
+4. [Generalised Linear Model set to Poisson](#Generalised Linear Model set to Poisson)  
+    4.1.[Characteristics of a GLM set to Poisson](#Characteristics of a GLM set to Poisson)  
+    4.2.[Research Question](#Research Question)   
+    4.3.[Fitting the Poisson GLM](#Fitting the Poisson GLM)    
+    4.4.[Model Interpretation and Evaluation](#Model Interpretation and Evaluation)  
+5. [Generalised Linear Model set to Binomial](#Generalised Linear Model set to Binomial)  
+    5.1.[Characteristics of a GLM set to Binomial](#Characteristics of a GLM set to Binomial)  
+    5.2.[Research Question](#Research Question)  
+    5.3.[Fitting the Binomial GLM](#Fitting the Binomial GLM)   
+    5.4.[Model Interpretation and Evaluation](#Model Interpretation and Evaluation)  
+6. [Generalised Additive Model](#Generalised Additive Model)  
+    6.1. [Characteristics of a GAM](#Characteristics of a GAM)  
+    6.2. [Research Question](#Research Question)  
+    6.3. [Fitting a GAM](#Fitting a GAM)  
+    6.4. [Model Interpretation and Evaluation](#Model Interpretation and Evaluation)  
+7. [Neural Network](#Neural Network)  
+8. [Support Vector Machine](#Support Vector Machine)  
+9. [Optimisation Problem](#Optimisation Problem)  
+10. [Conclusion](#Conclusion)  
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r imports, message = FALSE, error = FALSE, warning = FALSE, eval = TRUE, echo = TRUE, include = FALSE}
+
+#We are listing here all the libraries used in this document, however all of them will be stated again and reloaded directly in the schunks where they are needed to overcome knitting issues.
+
+#library("dplyr")
+#library("tidyr")
+#library("rnaturalearth")
+#library("rnaturalearthdata")
+#library("sf")
+#library("ggplot2")
+#library("ggcorrplot")
+#install.packages("olsrr")
+#library("olsrr")
+#library("cowplot")
+#library("mgcv")
+#library("mgcViz")
+
+
+```
+
+
+<br>
+
+## 1. Introduction <a name="introduction"></a>
+
+Earthquakes are one of the most destructive natural disasters that can strike without warning, causing extensive damage to infrastructure, loss of life, and massive economic losses. While we cannot prevent earthquakes from occurring, the ability to accurately predict when and where they might occur could save countless lives and minimize the damage caused. 
+
+Therefore, our aim with this report is to contribute the significant earthquake prediction which enables to provide advanced warning of potentially catastrophic seismic events, allowing governments and communities to prepare and take necessary measures to minimize the impact of such events. 
+
+<br>
+
+#### 1.1.Description of our data <a name="Description of our data"></a>
+
+**Data source: https://www.ngdc.noaa.gov/hazel/view/hazards/earthquake/search**
+
+The Significant Earthquake Database contains information on destructive earthquakes from 2150 B.C. to the present that meet at least one of the following criteria: Moderate damage (approximately $1 million or more), 10 or more deaths, Magnitude 7.5 or greater, Modified Mercalli Intensity X or greater, or the earthquake generated a tsunami. The database can also be displayed and extracted with the Natural Hazards Interactive Map.
+
+<br>
+
+Below we are listing a short summary of our main variables.
+At the primary and secondary deaths and damages where available the total numbers have been added to the dataset, in the "description" field the variables have already been clustered.  
+
+<br>
+
+<button type="button" class="collapsible">**Earthquake Magnitude [Mag] **</button>
+<div class="content">
+  <p>
+
+Valid values: 0.0 to 9.9
+
+The value in this column contains the primary earthquake magnitude. Magnitude measures the energy released at the source of the earthquake. Magnitude is determined from measurements on seismographs. For pre-instrumental events, the magnitudes are derived from intensities. There are several different scales for measuring earthquake magnitudes. The primary magnitude is chosen from the available magnitude scales in this order:
+
+Mw Magnitude  
+Ms Magnitude  
+Mb Magnitude  
+Ml Magnitude  
+Mfa Magnitude  
+Unknown Magnitude  
+ 
+ </p>
+</div>
+<br>
+
+<button type="button" class="collapsible">**Modified Mercalli Intensity Scale [MMI.Int]**</button>
+<div class="content">
+  <p>
+  
+Valid values: 1 to 12
+
+The Modified Mercalli Intensity (Int) is given in Roman Numerals (converted to numbers in the digital database). An interpretation of the values is listed below.
+
+Table 1. Modified Mercalli Intensity Scale of 1931  
+
+I.	Not felt except by a very few under especially favorable circumstances.  
+II.	Felt only by a few persons at rest, especially on upper floors of buildings. Delicately suspended objects may swing.  
+
+III.	Felt quite noticeably indoors, especially on upper floors of buildings, but many people do not recognize it as an earthquake. Standing motor cars may rock slightly. Vibration like passing truck. Duration estimated.  
+
+IV.	During the day felt indoors by many, outdoors by few. At night some awakened. Dishes, windows, and doors disturbed; walls make creaking sound. Sensation like heavy truck striking building. Standing motorcars rock noticeably.  
+
+V.	Felt by nearly everyone; many awakened. Some dishes, windows, etc., broken; a few instances of cracked plaster; unstable objects overturned. Disturbance of trees, poles, and other tall objects sometimes noticed. Pendulum clocks may stop.  
+
+VI.	Felt by all; many frightened and run outdoors. Some heavy furniture moved; a few instances of fallen plaster or damaged chimneys. Damage slight.  
+
+VII.	Everybody runs outdoors. Damage negligible in buildings of good design and construction slight to moderate in well built ordinary structures; considerable in poorly built or badly designed structures. Some chimneys broken. Noticed by persons driving motor cars.  
+
+VIII.	Damage slight in specially designed structures; considerable in ordinary substantial buildings, with partial collapse; great in poorly built structures. Panel walls thrown out of frame structures. Fall of chimneys, factory stacks, columns, monuments, walls. Heavy furniture overturned. Sand and mud ejected in small amounts. Changes in well water. Persons driving motor cars disturbed.  
+
+IX.	Damage considerable in specially designed structures; well-designed frame structures thrown out of plumb; great in substantial buildings, with partial collapse. Buildings shifted off foundations. Ground cracked conspicuously. Underground pipes broken.  
+
+X.	Some well-built wooden structures destroyed; most masonry and frame structures destroyed with foundations; ground badly cracked. Rails bent. Landslides considerable from river banks and steep slopes. Shifted sand and mud. Water splashed over banks.  
+
+XI.	Few, if any (masonry), structures remain standing. Bridges destroyed. Broad fissures in ground. Underground pipelines completely out of service. Earth slumps and land slips in soft ground. Rails bent greatly.  
+
+XII.	Damage total. Waves seen on ground surfaces. Lines of sight and level distorted. Objects thrown upward into the air.  
+
+ </p>
+</div>
+<br>
+
+<button type="button" class="collapsible">**Focal Depth (km) [Focal.Depth..km.]**</button>
+<div class="content">
+  <p>
+
+The depth of the earthquake is given in kilometers.
+
+ </p>
+</div>
+<br>
+
+<button type="button" class="collapsible">**Region**</button>
+<div class="content">
+  <p>
+
+Regional boundaries defined as follows:
+
+150 - North America and Hawaii: (Canada, Mexico, USA)
+
+100 - Central America: (Costa Rica, El Salvador, Guatemala, Honduras, Nicaragua, Panama)
+
+90 - Caribbean: (Antigua and Barbuda, Barbados, Cuba, Dominican Republic, French Guiana, Grenada, Guadeloupe, Haiti, Jamaica, Martinique, Puerto Rico, Saint Lucia, Saint Vincent and the Grenadines, Trinidad and Tobago, U.S. Virgin Islands)
+
+160 - South America: (Argentina, Bolivia, Brazil, Chile, Colombia, Ecuador, Peru, Venezuela)
+
+70 - Atlantic Ocean
+
+15 - Northern Africa: (Algeria, Egypt, Libya, Morocco, Sudan, Tunisia)
+
+10 - Central, Western and S. Africa: (Burundi, Cameroon, Canary Islands, Central African Republic, Congo, Coite DIvoire, Ethiopia, Gabon, Ghana, Guinea, Guyana, Malawi, Mozambique, Rwanda, Sierra Leone, South Africa, Tanzania, Togo, Uganda, Zambia)
+
+20 - Antarctica
+
+120 - Northern and Western Europe: (Austria, Belgium, France, Germany, Iceland, Netherlands, Switzerland, United Kingdom)
+
+130 - Southern Europe: (Azores (Portugal), Black Sea, Bosnia-Herzegovina, Croatia, Cyprus, Greece, Italy, Macedonia, Portugal, Serbia and Montenegro, Slovenia, Spain)
+
+110 - Eastern Europe: (Bulgaria, Hungary, Poland, Romania, Slovakia, Ukraine)
+
+140 - Middle East: (Iran, Iraq, Israel, Jordan, Lebanon, Saudi Arabia, Syria, Turkey, Yemen)
+
+40 - Central Asia and Caucasus: (Afghanistan, Armenia, Azerbaijan, Black Sea, Western China, Georgia, Kazakhstan, Kyrgyzstan, Mongolia, Russia, Tajikistan, Turkmenistan, Uzbekistan)
+
+30 - East Asia: (Eastern China, East China Sea, Japan, Japan Sea, North Korea, South Korea, Taiwan, Yellow Sea)
+
+60 - S. and SE. Asia and Indian Ocean: (Bangladesh, Bhutan, India, Indian Ocean, Myanmar (Burma), Nepal, Pakistan, Sri Lanka, Thailand, Vietnam)
+
+170 - Central and South Pacific: (Australia, Caroline Islands, Celebes Sea, Cook Islands, Fiji, French Polynesia, Guam, Indonesia, Kermadec Islands (New Zealand), Kiribati, Malaysia, Rep. of Marshall Islands, Fed. States of Micronesia, New Caledonia, New Zealand, Northern Mariana Islands, Pacific Ocean, Papua New Guinea, Philippines, Samoa, Solomon Islands, Solomon sea, South china sea, South Georgia and the South Sandwich Islands, Tasman Sea, Timor Sea, Tonga, Vanuatu)
+
+80 - Bering Sea
+
+50 - Kamchatka and Kuril Islands
+
+ </p>
+</div>
+<br>
+
+<button type="button" class="collapsible">**Hazard Association**</button>
+<div class="content">
+  <p>
+
+**Associated Tsunami or Seiche [Tsu]**  
+When a tsunami or seiche was generated by an earthquake, An icon appears in the Associated Tsunami column which is linked to the tsunami event database. The link will display additional tsunami event information.  
+
+**Volcano [Vol]**  
+The Volcano link will display additional information if the earthquake was associated with a volcanic eruption. The information may include information such as the VEI index, morphology, and the effects of the eruption.
+  
+ </p>
+</div>
+<br>
+
+<button type="button" class="collapsible">**Earthquake Effects**</button>
+<div class="content">
+  <p>
+
+**Description of Deaths from the Earthquake [Death.Description]**    
+
+Valid values: 0 to 4  
+
+When a description was found in the historical literature instead of an actual number of deaths, this value was coded and listed in the Deaths column. If the actual number of deaths was listed, a descriptor was also added for search purposes.  
+
+0	None  
+1	Few (~1 to 50 deaths)  
+2	Some (~51 to 100 deaths)  
+3	Many (~101 to 1000 deaths)  
+4	Very many (over 1000 deaths)  
+
+**Description of Damage from the Earthquake [Damage.Description]**  
+
+Valid values: 0 to 4  
+
+For those events not offering a monetary evaluation of damage, the following five-level scale was used to classify damage (1990 dollars) and was listed in the Damage column. If the actual dollar amount of damage was listed, a descriptor was also added for search purposes.  
+
+0	NONE  
+1	LIMITED (roughly corresponding to less than $1 million)  
+2	MODERATE (~$1 to $5 million)  
+3	SEVERE (~$5 to $25 million)  
+4	EXTREME (~$25 million or more)  
+
+**[Missing.Description]**  
+**[Injuries.Description]**  
+**[Houses.Destroyed.Description]**  
+**[Houses.Damaged.Description]**  
+
+ </p>
+</div>
+<br>
+
+<button type="button" class="collapsible">**Total Earthquake and Secondary Effects**</button>
+<div class="content">
+  <p>
+**Description of Deaths from the Earthquake and secondary effects (eg Tsunami)**  
+Valid values: 0 to 4  
+
+When a description was found in the historical literature instead of an actual number of deaths, this value was coded and listed in the Deaths column. If the actual number of deaths was listed, a descriptor was also added for search purposes.  
+
+0	None  
+1	Few (~1 to 50 deaths)  
+2	Some (~51 to 100 deaths)  
+3	Many (~101 to 1000 deaths)  
+4	Very many (over 1000 deaths) 
+
+**[Total.Death.Description]**  
+**[Total.Missing.Description]**  
+**[Total.Injuries.Description]**  
+**[Total.Damage...Mil.]**  
+**[Total.Houses.Destroyed.Description]**  
+**[Total.Houses.Damaged.Description]**  
+ </p>
+</div>
+<br>
+
+
+#### 1.2.Getting the data <a name="Getting the data"></a>
+
+We first setting the working directory, than we are loading the tab separated data file to R.
+
+
+```{r getting data, message=FALSE, warning=FALSE, eval = TRUE, echo = TRUE, include=TRUE}
+
+#setwd("/Users/esinisik/Library/Mobile Documents/com~apple~CloudDocs/Uni/MAS/Sem2/Applied Machine Learning and Predictive Modelling 1/ML 1 Project")
+eqdata <- read.csv("significant-earthquakes-database-country-region.tsv", header = TRUE, sep = "\t")
+
+```
+
+At first we will have a look at the data provided:
+
+<button type="button" class="collapsible">**str data (interactive dropdown button)**</button>
+<div class="content">
+  <p>
+
+```{r overview1, message = FALSE, error = FALSE, warning = FALSE, eval = TRUE, echo = TRUE, include = TRUE}
+
+str(eqdata)
+
+```
+
+The original data set has 6366 observations of 42 variables.
+
+  </p>
+</div>
+<br>
+
+
+#### 1.3 Preparing the data <a name="Preparing the data"></a>
+
+After loading we have decided to perform the below cleaning our dataset:
+**Cleaning Process**
+**Exclude data dated before 1900**
+
+- Our reasons are the following:
+
+  * data available mostly from historical records therefore less reliable
+
+  * the measurement quality is not reliable based on less developed methods. The modern seismometer wasn't invented until the mid 18 hundreds. Therefore, it can be suggested that these modern technologies were not widely used around the world until the 19-hundreds. 
+
+  * we had a lot of missing values from these records
+
+**Exclude data where magnitude is not available**
+
+- * the variable of magnitude has key importance in our analysis, the records where it is missing are therefore too unreliable to consider in the analysis.
+
+**Exclude data where the number of deaths is not available**
+
+- * the death count is also a key variable within the scope of our analysis. Since there is no information available whether the NA can be treated as 0 or as true unknowns, the decision has been taken to exclude records without such value.
+
+**Clean column names for better handling**
+
+- * Some of the columns (e.g. "Focal.Depth..km.") will be rewritten for better handling in the analysis.
+
+**Enrichment Process**
+**Add magnitude column without decimals**
+
+- * At certain stages of the analysis, it can be beneficial to consider the number of magnitude as counts.
+
+```{r cleaning, error=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+library(dplyr)
+
+eqdata <- eqdata %>% filter(Year >= 1900)
+eqdata <- eqdata %>% filter(!is.na(Mag))
+eqdata <- eqdata %>% filter(!is.na(Deaths))
+eqdata$Mag.full <- floor(eqdata$Mag)
+sum(is.na(eqdata$Deaths))
+
+
+```
+
+<br>
+
+<button type="button" class="collapsible">**str cleaned data (interactive dropdown button)**</button>
+<div class="content">
+  <p>
+
+```{r overview3, message = FALSE, error = FALSE, warning = FALSE, eval = TRUE, echo = TRUE, include = TRUE}
+
+str(eqdata)
+
+```
+
+The original data set has 6367 observations of 41 variables.
+
+  </p>
+</div>
+<br>
+
+After cleaning the dataset we have **1469 observations of  42 variables** remaining. We will proceed to perform all the following analysis with the transformed data set.
+
+<br>
+
+## 2. Graphical Analysis <a name="Graphical Analysis"></a>
+
+#### 2.1 Map of earthquakes <a name="Map of earthquakes"></a>
+
+```{r map, echo=FALSE, error=FALSE, message=FALSE, warning=FALSE}
+
+# Remove rows with missing values in both latitude and longitude columns
+df_separated <- eqdata %>% filter(!is.na(Latitude))
+df_separated <- eqdata %>% filter(!is.na(Longitude))
+df_separated <- df_separated[13:14]
+
+library("rnaturalearth")
+library("rnaturalearthdata")
+library("sf")
+library("ggplot2")
+
+world <- ne_countries(scale = "medium", returnclass = "sf")
+class(world)
+
+
+sites <- data.frame(longitude = df_separated$Longitude, latitude = df_separated$Latitude)
+sites <- st_as_sf(sites, coords = c("longitude", "latitude"), 
+                   crs = 4326, agr = "constant")
+
+eq_map <- ggplot(data = world) +
+  geom_sf() +
+  geom_sf(data = sites, size = 1, shape = 23, fill = "darkred") +
+  coord_sf(lims_method = "geometry_bbox", default_crs = NULL, expand = TRUE)
+eq_map
+
+# Esin: I was thinking that we could also plot the map and color the regions from the data. I tried some stuff but it didn't work perfectly, will poste the code here:
+
+# #create a world map with regions
+# install.packages("maps")
+# library(maps)
+# library(ggplot2)
+# ## make a df with only the country to overlap
+# map_data_es <- map_data('world')[map_data('world')
+# map_data_r150 <- map_data('world')[map_data('world')$region == c("Canada", "Mexico","USA"),]
+# map_data_r100 <- map_data('world')[map_data('world')$region == c("Costa Rica","El Salvador","Guatemala","Honduras","Nicaragua","Panama"),]
+# map_data_r90 <- map_data('world')[map_data('world')$region == c("Antigua and Barbuda", "Barbados", "Cuba", "Dominican Republic", "French Guiana", "Grenada", "Guadeloupe", "Haiti", "Jamaica", "Martinique", "Puerto Rico", "Saint Lucia", "Saint Vincent and the Grenadines", "Trinidad and Tobago", "U.S. Virgin Islands"),]
+# map_data_r160 <- map_data('world')[map_data('world')$region == c("Argentina","Bolivia","Brazil","Chile","Colombia","Ecuador","Peru","Venezuela"),]
+# map_data_r70 <- map_data('world')[map_data('world')$region == "Atlantic",]
+# 
+# 
+# ## The map (maps + ggplot2 )
+# ggplot() +
+#     ## First layer: worldwide map
+#     geom_polygon(data = map_data("world"),
+#                  aes(x=long, y=lat, group = group),
+#                  color = '#9c9c9c', fill = '#f3f3f3') +
+#     ## Second layer: Country map
+#     geom_polygon(data = map_data_r150,
+#                  aes(x=long, y=lat, group = group),
+#                  fill = 'pink') +
+#     geom_polygon(data = map_data_r100,
+#                  aes(x=long, y=lat, group = group),
+#                  fill = "orange") +
+#     geom_polygon(data = map_data_r90,
+#                  aes(x=long, y=lat, group = group),
+#                  fill = "lightgreen") +
+#     geom_polygon(data = map_data_r160,
+#                  aes(x=long, y=lat, group = group),
+#                  fill = "lightyellow") +
+#     geom_polygon(data = map_data_r70,
+#                  aes(x=long, y=lat, group = group),
+#                  fill = "lightblue") +
+#     coord_map() +
+#     ggtitle("Significant Earthquake Regions")
+# 
+# #### map end 
+
+```
+
+<br>
+
+#### 2.2 Plotting continous variables <a name="Plotting continous variable"></a>
+
+In the below histograms we plot the continuous variables of our data to see the distribution of the data points.
+
+Remark:  
+ - Year we are taking as a continuous variable first  
+ - Outcomes of an earthquake in terms of death and damage numbers are all count numbers, therefore we take the logarithms of these values in the below plots to better see the distribution of the data  
+
+<br>
+
+
+```{r graphical analysis continous, message = FALSE, error = FALSE, warning = FALSE, eval = TRUE, echo = FALSE, include = TRUE}
+library("ggplot2")
+library("ggpubr")
+
+# Frequency Magnitude:
+h1 <- ggplot(eqdata, aes(x=Mag)) + 
+  geom_histogram(color="black", fill="lightblue")+
+  labs(title = "Magnitude", x = "Magnitude", y = "Freqency")
+
+
+# Frequency Focal Depth:
+h2 <- ggplot(eqdata, aes(x=Focal.Depth..km.)) + 
+  geom_histogram(color="black", fill="lightblue")+
+  labs(title = "Focal depth", x = "Focal depth", y = "Freqency")
+
+# Frequency Year:
+h3 <- ggplot(eqdata, aes(x=Year)) + 
+  geom_histogram(color="black", fill="lightblue")+
+  labs(title = "Year", x = "Year", y = "Freqency")
+
+# Plotting all histograms on one page: 
+ggarrange(h1,h2,h3 + rremove("x.text"), 
+#          labels = c("Magnitude", "Focal depth", "Year"),
+          ncol = 3, nrow = 1)
+
+h4 <- ggplot(eqdata, aes(x=log(Deaths))) + 
+  geom_histogram(color="black", fill="lightblue")+
+  labs(title= "Deaths", x = "Deaths", y = "Freqency")
+
+h5 <- ggplot(eqdata, aes(x=log(Missing))) + 
+  geom_histogram(color="black", fill="lightblue")+
+  labs(title = "Missing", x = "Missing", y = "Freqency")
+
+h6 <- ggplot(eqdata, aes(x=log(Injuries))) + 
+  geom_histogram(color="black", fill="lightblue")+
+  labs(title = "Injuries", x = "Injuries", y = "Freqency")
+
+h7 <- ggplot(eqdata, aes(x=log(Damage...Mil.))) + 
+  geom_histogram(color="black", fill="lightblue")+
+  labs(title= "Damage (Mil.$).", x = "Damage (Mil.$).", y = "Freqency")
+
+h8 <- ggplot(eqdata, aes(x=log(Houses.Destroyed))) + 
+  geom_histogram(color="black", fill="lightblue")+
+  labs(title = "Houses.Destroyed", x = "Houses.Destroyed", y = "Freqency")
+
+h9 <- ggplot(eqdata, aes(x=log(Houses.Damaged))) + 
+  geom_histogram(color="black", fill="lightblue")+
+  labs(title= "Houses.Damaged",x = "Houses.Damaged", y = "Freqency")
+
+# Plotting continous count outcome plots on one page: 
+ggarrange(h4, h5, h6, h7, h8, h9 + rremove("x.text"), 
+#         labels = c("Death", "Missing", "Injuries", "Damage ", "Houses Destroyed", "Houses Damaged"),
+          ncol = 3, nrow = 2)
+
+```
+
+<br>
+
+Above we can see that:  
+ - Magnitude is rather normally distributed  
+ - Focal depth is left skewed  
+ - Year is rather right skewed  
+ 
+The outcomes of an earthquake are on a logarithmic scale:
+Here we also see a close to normal distribution except the number of deaths, which is rather left skewed and a rather random distribution with the number of missing people. 
+
+<br>
+
+#### 2.3 Plotting categorical variables <a name="Plotting categorical variables"></a>
+
+<br>
+Let us visualize the categorical variables of our data. 
+
+<br>
+
+```{r graphical analysis categorical, message = FALSE, error = FALSE, warning = FALSE, eval = TRUE, echo = FALSE, include = TRUE}
+
+library("ggpubr")
+library("scales")
+library("tidytext")
+library("ggplot2")
+library("forcats")
+
+# Frequency Intensity:
+p1 <- ggplot(eqdata, aes(x=factor(MMI.Int))) + 
+  geom_bar(aes(y = (..count..)/sum(..count..)),color="black", fill="lightblue") + 
+  scale_y_continuous(labels = percent)+
+  labs(title ="Intensity",x = "Intensity", y = "Freqency")
+
+# Frequency Region:
+eqdata <- eqdata %>% 
+  add_count(Region, name = "Freq.Region")
+
+p8 <- ggplot(eqdata, aes(x=fct_reorder(factor(Region), -Freq.Region))) + 
+  geom_bar(aes(y = (..count..)/sum(..count..)),color="black", fill="lightblue") + 
+  scale_y_continuous(labels = percent)+
+  labs(title="Region/Ordered",x = "Region", y = "Freqency")
+
+# Plotting categorical variables bar plots on one page: 
+ggarrange(p1,p8,
+#         labels = c("Intensity", "Region"),
+          ncol = 1, nrow = 2)
+
+# Frequency Country:
+eqdata <- eqdata %>% 
+  add_count(Country, name = "Freq.Country")
+
+ggplot(eqdata, aes(x=fct_reorder(factor(Country),-Freq.Country))) + 
+  geom_bar(aes(y = (..count..)/sum(..count..)),color="black", fill="lightblue") + 
+  scale_y_continuous(labels = percent)+
+  labs(title= "Country/Ordered", x = "Country", y = "Freqency")+
+  theme(axis.text.x = element_text(angle=90, hjust =1, size = 5))
+
+```
+
+<br>
+
+Looking at the categorical variables:  
+ - Intensity has also a rather normal distribution, however we can see a large number of NA values  
+ - The region and country variables we have sorted in decreasing order
+ 
+Region:
+The below regions have the higest number of occurence in our database, which means the highest number of earhquakes registered:
+ - 140: Middle East    
+ - 30: East Asia  
+ - 160: South America   
+ - 60: S. and SE. Asia and Indian Ocean      
+ - 170: Central and South Pacific    
+ - 130: Southern Europe    
+ - 40: Central Asia and Caucasus    
+ - 150: 150 - North America and Hawaii  
+ 
+ As we can see the most frequently mentioned countries are also from the regions mentioned in the above regions.
+ 
+Based on these charts and the World map visualizing the data based on latitude and longitude we assume that location has an influence on the likelihood of an earthquake happening. 
+ 
+<br>
+
+```{r graphical analysis categorical1, message = FALSE, error = FALSE, warning = FALSE, eval = TRUE, echo = FALSE, include = TRUE} 
+
+# Frequency Death:
+p2 <- ggplot(eqdata, aes(x=factor(Death.Description))) + 
+  geom_bar(aes(y = (..count..)/sum(..count..)),color="black", fill="lightblue") + 
+  scale_y_continuous(labels = percent)+
+  labs(title = "Death Description", x = "Death Description", y = "Freqency")
+
+# Frequency Missing:
+p3 <- ggplot(eqdata, aes(x=factor(Missing.Description))) + 
+  geom_bar(aes(y = (..count..)/sum(..count..)),color="black", fill="lightblue") + 
+  scale_y_continuous(labels = percent)+
+  labs(title ="Missing.Description", x = "Missing.Description", y = "Freqency")
+
+# Frequency Injuries:
+p4 <- ggplot(eqdata, aes(x=factor(Injuries.Description))) + 
+  geom_bar(aes(y = (..count..)/sum(..count..)),color="black", fill="lightblue") + 
+  scale_y_continuous(labels = percent)+
+  labs(title= "Injuries Description", x = "Injuries Description", y = "Freqency")
+
+# Frequency Damage:
+p5 <- ggplot(eqdata, aes(x=factor(Damage.Description))) + 
+  geom_bar(aes(y = (..count..)/sum(..count..)),color="black", fill="lightblue") + 
+  scale_y_continuous(labels = percent)+
+  labs(title= "Damage Description",x = "Damage Description", y = "Freqency")
+
+# Frequency Houses Destroyed:
+p6 <- ggplot(eqdata, aes(x=factor(Houses.Destroyed.Description))) + 
+  geom_bar(aes(y = (..count..)/sum(..count..)),color="black", fill="lightblue") + 
+  scale_y_continuous(labels = percent)+
+  labs(title = "Houses Destroyed Description",x = "Houses Destroyed Description", y = "Freqency")
+
+# Frequency Houses Damaged:
+p7 <- ggplot(eqdata, aes(x=factor(Houses.Damaged.Description))) + 
+  geom_bar(aes(y = (..count..)/sum(..count..)),color="black", fill="lightblue") + 
+  scale_y_continuous(labels = percent)+
+  labs(title ="Houses Damaged Description", x = "Houses Damaged Decription", y = "Freqency")
+
+
+# Plotting all outcome categorical outcome bar plots on one page: 
+ggarrange(p2,p3,p4,p5,p6,p7 + rremove("x.text"), 
+#        labels = c("Death Description", "Missing Description", "Injuries Description", "Damage Description", "Houses Destroyed Description", "Houses Damaged Description"),
+          ncol = 3, nrow = 2)
+
+```
+
+<br>
+
+Looking at the categorical outcome variables we can see that:  
+ - Variables Missing description, Houses Damaged, Houses Destroyed have relative low number of data points.  
+  - Except Death Description and Damage Description we have a noticeable amount of NA values    
+   - Further on we can see that Death description does not have NA values and has rather a right skewed distribution.  
+    - Damage description has a low amount of NA values, but the distribution is more balanced. 
+ 
+<br>
+
+## 3. Linear Model <a name="Linear Model"></a>
+
+<br>
+
+#### 3.1 Characteristics of a Linear Model
+
+Generally linear models are never completely correct, but the interpret ability of the linear model is relatively high compared to other more complex models. The danger of over fitting is generally less with linear models. This is the reason, we start our statistical analysis with a multiple linear regression below.
+
+Linear regression models are unsupervised models, which means we want to predict how the dependent variable changes with changing the independent variables. Regression models the dependent variable takes quantitative measures and continuous.
+
+<br>
+
+#### 3.2 Research Question
+
+Given that in the simple linear regression, the dependent variable shall be a continuous and numeric one we will start our analysis taking the magnitude of an earthquake as a dependent variable. 
+
+The magnitude of an earthquake indicates the released energy of the movement, therefore it is an important indicator of an earthquake. The below independent variables available in our data set, which influence the magnitude of an earthquake:
+
+ - location (longitude, latitude)  
+ - focal depth of an epicenter  
+ - time (Year) as independent variables in our model
+
+The other variables: intensity, number of deaths, caused injuries and damages are logically either an outcome of an earthquake, as well they are all counted values, which we will look at later in our report with other more suitable statistical models.
+ 
+ <br>
+
+#### 3.3 Data Cleaning and Graphical Analysis
+
+All records have a magnitude value, given we removed already missing values at the first stage of our data cleaning process.
+
+Below we filter out all values where year, focal dept, longitude or latitude is missing and will run our analysis on the below subset of the data:
+
+
+```{r linear regression 0, message = FALSE, error = FALSE, warning = FALSE, eval = TRUE, echo = FALSE, include = TRUE}
+
+library("dplyr")
+library("tidyr")
+
+# Piping total death to remove NAs from columns total death, magnitude,intensity and focal depth
+
+eqdata.no.na.mag <- eqdata %>%
+  select(Year, Mag, Focal.Depth..km., Longitude, Latitude)%>%
+  filter(!is.na(Mag))%>%
+  filter(!is.na(Year))%>%
+  filter(!is.na(Focal.Depth..km.))%>%
+  filter(!is.na(Longitude))%>%
+  filter(!is.na(Latitude))
+  
+#Our filtered data set contains so many rows:
+linear.count.rows.mag <- sum(!is.na(eqdata.no.na.mag$Mag))
+
+str(eqdata.no.na.mag)
+
+```
+
+Our final data set eqdata.no.na.mag has `r linear.count.rows.mag` rows.  
+
+
+First look at the distribution of the response variable, magnitude with the below histogram.
+As we can see the highest frequency of the values is between magnitude 6 and 7, the values are decreasing towards zero and towards the value 9.9.  The histogram shows a light left skewed distribution, however showed on the Q-Q plot the distribution is very closed to normal distribution, which we will now take as a prerequisite assumption for our further investigation in this chapter with a multiple linear regression regression model.
+
+<br>
+
+```{r linear regression hist, message = FALSE, error = FALSE, warning = FALSE, eval = TRUE, echo = FALSE, include = TRUE}
+
+library("ggplot2")
+library("ggpubr")
+library("cowplot")
+
+#par(mfrow=c(1,2)) 
+
+qqplot_mag <- ggqqplot(eqdata.no.na.mag$Mag, color = "darkblue")
+
+hist_mag <- ggplot(data = eqdata.no.na.mag,
+                   aes(x=Mag)) + 
+  geom_histogram(aes(y = ..density..), color="black", fill="lightblue")+
+  geom_density(lwd = 1.2,
+               linetype = 1,
+               colour = 2)
+
+plot_grid(hist_mag, qqplot_mag , labels = "AUTO")
+
+
+
+```
+<br>
+
+In the next step of our graphical analysis we look at the relationship between Magnitude and Latitude and Longitude:
+
+<br>
+```{r linear regression 1, message = FALSE, error = FALSE, warning = FALSE, eval = TRUE, echo = FALSE, include = TRUE}
+
+plot_lat <- ggplot(data = eqdata.no.na.mag,
+       mapping = aes(y = Mag,x = Latitude)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+plot_long <- ggplot(data = eqdata.no.na.mag,
+       mapping = aes(y = Mag,x = Longitude)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+plot_grid(plot_lat, plot_long, labels = "AUTO")
+
+```
+
+<br>
+
+**Graph A:** It is clearly visible that between the latitude 30 and 60 the number of data points is increasing.This corresponds to the map shown before, this latitude corresponds to the northern hemisphere to the most populated regions: majority of the territories of North America, Europe and Asia is located in this latitude range. We can see a negative correlation. With each unit of increasing the latitude the magnitude of the earthquakes seemingly decreasing. The smoother on this graph is close to a perfect straight line. Therefore, we may assume that there is no hint that the relationship between the response variable and the latitude predictor maybe non-linear.
+
+<br>
+
+**Graph B:** On the plot with the longitude values, we can see two groups: First is located around the value -100 this value corresponds to the West coast of the North American region. The bigger group of data points is located between 0 and +150 longitude. These values correspond to the Eurasian continent. In both groups is the number of data points higher. However here the regression line is almost parallel with the X axis, very flat around the value of 6 magnitude. This may indicate a rather low correlation between Magnitude and Longitude. 
+The shape of the line is close to a perfect straight line. Therefore, we may assume that there is no hint that the relationship between the response variable and the latitude predictor maybe non-linear.   
+
+<br>
+
+We can also look at in 3 dimension interactive plot of the relationship between the longitude and latitude in terms of our dependent variable, magnitude. 
+Logically, we get the results, as above plotting the longitude and latitude with the dependent variable magnitude if we turn the graph towards the corresponding axes. On the third dimension turning the graph in the angle having Longitude on the x-axis and Latitude on the y axis, not surprisingly the distribution of the data points corresponds the world map. 
+
+<br>
+
+```{r linear regression graph3D, message = FALSE, error = FALSE, warning = FALSE, eval = TRUE, echo = FALSE, include = TRUE}
+
+ 
+library(plotly)
+library(reshape2)
+
+# Plot our datapoints in 3D
+plot.all.mag <- plot_ly(x=eqdata.no.na.mag$Longitude,
+                          y=eqdata.no.na.mag$Latitude,
+                          z=eqdata.no.na.mag$Mag,
+                          type="scatter3d", 
+                          mode="markers", 
+                          color=eqdata.no.na.mag$Mag)
+
+plot.all.mag <- plot_ly(eqdata.no.na.mag,
+                           x= ~ Longitude,
+                           y= ~ Latitude,
+                           z= ~ Mag,
+                           type = "scatter3d",
+                           color = ~ Mag,
+                           #colors = c("darkblue","grey","yellow"),
+                           mode = "markers")
+plot.all.mag
+
+```
+<br>
+
+Let`s continue our graphical analysis with the variable Focal Depth:
+
+<br>
+
+```{r linear regression 2, message = FALSE, error = FALSE, warning = FALSE, eval = TRUE, echo = FALSE, include = TRUE}
+
+ggplot(data = eqdata.no.na.mag,
+       mapping = aes(y = Mag,x = Focal.Depth..km.)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+<br>
+
+In case of the focal debt we can see that the values have a high density between 0 and 100 km. We see a few values lying out which may be high leverage points, which means their change or removal influences more our model as the other data points. The distribution of the data therefore is a left skewed.
+
+<br>
+
+Finally we plot the variable Year as continuous (scatter plot) as well as categorical (box plot) variable. As we saw before the distribution of this variable is rather right skewed.
+
+<br>
+ 
+```{r linear regression 3, message = FALSE, error = FALSE, warning = FALSE, eval = TRUE, echo = FALSE, include = TRUE}
+
+plot_year <- ggplot(data = eqdata.no.na.mag,
+       mapping = aes(y = Mag,x = Year)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+
+plot_fact.year <- ggplot(data = eqdata.no.na.mag,
+       mapping = aes(y = Mag,x = factor(Year))) +
+  geom_boxplot() 
+
+plot_grid(plot_year,plot_fact.year , labels = "AUTO")
+
+```
+
+<br>
+
+**Graph A:** The above scatter plot we have plotted the magnitude by year. It is clearly visible that in the early years between 1900 and 1950 are less data points visible on the chart. After the 1975 the number of data points increases. We can also see more lower values below the value of 3 magnitude. This may be explained with the advancement of the measuring technologies, or distribution of these technologies throughout the different regions. 
+Similarly as above, the smoother on this graph is close to a perfect straight line. Therefore, we may assume that there is no hint that the relationship between the response variable and the latitude predictor maybe non-linear.
+
+**Graph B:** On the second plot, we have factorized the independent variable year, and taking it as a categorical variable. Here it is clearly visible the increasing of the variance given the fiskers of the box plot getting longer towards the later years. The number of outlier values in each direction (towards the minimum and maximum) are also increasing with time towards today. 
+Possible explanation for this increasing of variance could be that the methods and equipment of the measurements have improved throughout the times, so more sensible equipment records more data points which have a lower value of magnitude. 
+
+**Colinearity**  
+
+Now we are looking at the correlation matrix, to check whether there is a co-linearity between any of our variables above.
+
+<br>
+
+```{r linear regression fit model mag3, message = FALSE, error = FALSE, warning = FALSE, eval = TRUE, echo = FALSE, include = TRUE}
+
+#create the correlation matrix
+corr.matrix.mag <- cor(eqdata.no.na.mag)
+
+# funktion creating the correlation matrix with gglot and corrplot
+library(ggcorrplot)
+library(ggplot2)
+
+formated_ggcorrplot <- function(f_correlation_matrix) {
+  ggcorrplot(f_correlation_matrix, show.legend = TRUE , sig.level=0.05, lab_size = 4.5,lab = TRUE,lab_col ="darkred", p.mat = NULL, 
+             insig = c("pch", "blank"), pch = 1, pch.col = "black", pch.cex =1,
+             tl.cex = 10) +
+    theme(axis.text.x = element_text(margin=margin(-2,0,0,0)),  # Order: top, right, bottom, left
+          axis.text.y = element_text(margin=margin(0,-2,0,0))) +
+    geom_vline(xintercept=1:ncol(f_correlation_matrix)-0.5, colour="white", size=1) +
+    geom_hline(yintercept=1:ncol(f_correlation_matrix)-0.5, colour="white", size=1)
+}
+
+formated_ggcorrplot(corr.matrix.mag)
+
+```
+
+<br>
+
+As you can see on the correlation matrix, there is no colinearity between the variables. Most of the values are close to 0. Interestingly we can see a weak correlation between longitude and focal depth as we may have expected during our graphical analysis.
+
+<br>
+
+#### 3.4 Fitting the Linear Model 
+
+Let us fit the linear model with all 4 variables: Magnitude as Dependent, Longitude, Latitude, Focal debt and Years.
+
+Before doing so we need to analyse the variables:    
+ - Magnitude, Latitude, Longitude, Focal Depth  -> continuous    
+ - Year: can be seen as continuous or categorical variable, which has more than 2 levels.
+ - To see if Latitude and Longitude have an interaction, in the third model we will add a niteraction term
+ 
+Given that to test a categorical variable with more than two levels the drop1() function must be used - we cannot use the summary function if we factorize the Year variable.
+
+For continuous variables can equivalently be tested with the drop1() function (i.e. via F-tests) and for a continuous variable the results of a t-test or a F-test are identical.
+
+Therefore we will use the drop1() function to fit the linear models below:
+
+1. taking the year as factorized as a categorical variable 
+2. taking the year as continuous variable  
+3. adding an interaction with Latitude and Longitude to the 2nd model.
+
+We use the drop1() function to fit the linear models below:
+
+```{r linear regression fit mode0 mag1, message = FALSE, error = FALSE, warning = FALSE, eval = TRUE, echo = FALSE, include = FALSE}
+
+lm.no.na.mag <- lm(Mag ~ Focal.Depth..km. + Latitude + Longitude + factor(Year), data = eqdata.no.na.mag)
+
+```
+
+```{r linear regression fit model mag1, message = FALSE, error = FALSE, warning = FALSE, eval = TRUE, echo = FALSE, include = FALSE}
+
+lm.no.na.mag2 <- lm(Mag ~ Focal.Depth..km. + Latitude + Longitude + Year, data = eqdata.no.na.mag)
+
+lm.no.na.mag3 <- lm(Mag ~ Focal.Depth..km. + Year + Latitude + Longitude + (Latitude*Longitude), data = eqdata.no.na.mag)
+
+
+```
+
+```{r linear regression fit model mag2, eval=TRUE, echo=FALSE, error=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+
+drop1(lm.no.na.mag, test = "F")
+drop1(lm.no.na.mag2, test = "F")
+drop1(lm.no.na.mag3, test = "F")
+
+```
+
+<br>
+
+Our results show the all variables have a relevant effect on the response variable. We can see that longitude has a lower effect, which is to be explained the very flat regression line between magnitude and longitude, however there is no evidence that there is an interaction between lonitude and lattitude in our model.
+
+Based on the AIC values, the first model (with factor(Year)) has a lower AIC (-205.79) compared to the second model (-310.35 or -311.33). In general, a lower AIC indicates a better fit and a more parsimonious model. Therefore, the first model with the factorized Year variable is considered a better fit based on the AIC criterion.
+
+Looking at more detailed analysis of the residuals of the linear model with the factorized Year variable, we can see the following:
+
+<br>
+
+```{r linear regression fit model plot, eval=TRUE, echo=FALSE, error=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+par(mfrow=c(2,2))
+plot(lm.no.na.mag)
+
+```
+
+**Residuals vs Fitted Values**  
+
+The red line is linear, however the majority of our data points between 5 and 7 divide from the line. This may indicate some non-linearity in our data and may need a further investigation and optimazation. 
+
+**Normal Q-Q**
+
+This chart we can see how the distribution of the data is. In case the most data points lie in the line, the data is normally distributed, as we took as a prerequisite assumption at the beginning of our the graphical analysis.
+
+**Scale Location**  
+
+This chart we can see that there is heteroskedasticity in our data. The red line is approximately horizontal, this means that the average magnitude of the standardized residuals isn’t changing much as a function of the fitted values.
+However the distribution of the data points concentrates around the values between 5-7 while in lower and higher values we have significantly less data points. This indicates heteroskedasticity.  
+
+**Residuals vs Leverage**  
+
+In graphical analysis we could see some data points "far" away, or outlying. This chart shows which outliers are high leverage points, which means their change or removal influences more our model as the other data points. We have few such a points which lie outside of the line indicating the Cook`s distance.
+
+**Conclusion**  
+
+Fitting a simple multiple linear regression model gives a good overall picture. Based on our findings regarding our response variables, we see a need for further investigation with different, more complex statistical models.
+In the next chapter we will continue our analysis in more detail on the relationship of the magnitude and the regional differences.
+
+<br>
+
+## 4. Generalised Linear Model set to Poisson <a name="Generalised Linear Model set to Poisson"></a>
+
+<br>
+
+#### 4.1 Characteristics of a GLM set to Poisson Distribution
+
+A Generalized Linear Model is the same as a Linear Model with a link set to 1 and assumes a normal (Gaussian) distribution of the data. A GLM set Poisson on the other side does not assume normal distribution, but rather a Poisson distribution as visible on in the plot on the left-hand side. The link function of a GLM set to Poisson is the natural log. It is therefore suitable to be used to analyze data doesn't have a normal distribution.
+
+<br>
+xxxxxxxx(add plot picture of gaussian and poisson)
+<br>
+
+A key requirement for a GLM set to Poisson is that mean and variance of the data are equal. However, in real-case scenarios, this is often not the case. Therefore, the "quasipoisson" family will be considered in the following analysis.
+
+<br>
+
+#### 4.2 Research Question
+
+Another key requirement of fitting a GLM set to Poisson or Quasipoisson is the characteristic of the predictor in the model. The predictor can only be count data, for which there are plenty of variables given for this dataset. However, the presumably most sensible choice would be to analyze which variables could have a significant influence on the magnitude of an earthquake. Having created the magnitude column without decimals, it would allow to fit it into a Quasipoisson GLM and would still not loose its' ability to be interpreted.
+
+<br>
+
+#### 4.3 Fitting the Poisson GLM
+
+Reviewing the factual background which the available variables in the dataset are based on, it would not make much sense to analyze a possible influence on the magnitude in variables that state the effects after an earthquake. This means that variables such as deaths, injuries, or material damages that occur as after-effects of an earthquake should not be considered for this model. Based on the availability in this dataset, variables that could explain a magnitude, on the other side, are the focal depth of the epicenter, the region in which an earthquake occured, and the specific country.
+
+<br>
+
+Fitting the previewed model could be written in this form: xxxxxxxxxx
+
+<br>
+
+#### 4.4 Model Interpretation and Evaluation
+
+Fitting the presented GLM yields the following results:
+
+<br>
+
+<button type="button" class="collapsible">**Results of Fitting the GLM (interactive drop down button)**</button>
+<div class="content">
+  <p>
+  
+```{r GLM quasipoisson, message = FALSE, error = FALSE, warning = FALSE, eval = TRUE, echo = FALSE, include = TRUE}
+
+glm.fit <- glm(Mag.full ~ Focal.Depth..km. + factor(Region) + factor(Country), data = eqdata, family = "quasipoisson")
+summary(glm.fit)
+
+cat("\n")
+cat("\n")
+cat("\n")
+
+
+exp.coef.focaldepth <- exp(coef(glm.fit)["Focal.Depth..km."])
+cat("Coefficient for Focal Depth:", exp.coef.focaldepth, sep = " ")
+cat("\n")
+cat("\n")
+exp.coef.region120 <- exp(coef(glm.fit)["factor(Region)120"])
+cat("Coefficient for Region 120:", exp.coef.region120, sep = " ")
+cat("\n")
+cat("\n")
+exp.coef.japan <- exp(coef(glm.fit)["factor(Country)JAPAN"])
+cat("Coefficient for Country Japan:", exp.coef.japan, sep = " ")
+
+```
+
+  </p>
+</div>
+<br>
+
+**Focal Depth:** 
+As expected, the focal depth of an earthquake has statistically significant influence on the magnitude of an earthquake. The model reveals that increasing the focal depth by 1km, it would result in a magnitude higher by 0.05%.
+<br>
+```{r}
+plot(eqdata$Focal.Depth..km., eqdata$Mag, title(main = "Magnitude - Focal Depth"),xlab =" Focal Depth in km", ylab = "Magnitude")
+```
+<br>
+Nevertheless, plotting focal depth and magnitude reveals that many earthquakes, especially also strong ones, happen at a low depth more frequently. This very slow increase in magnitude the deeper the epicenter is situated, could be traced back to the few, but strong, earthquakes that happened at a very high focal depth.
+<br>
+
+**Region 120:**
+
+Also, high significance for Region 120 can be visible. Looking at the coefficient, it can be seen that in Region 120, countries get in average around 53.9% lower magnitudes than other regions. Being reminded that region 120 represents Northern and Western Europe, this outcome seems very plausible as Europe is not known for earthquakes with a strong magnitude.
+<br>
+
+**Country Japan:**
+
+Looking at the country-wise significance, it shows that especially the grounds at the location of Japan, Mexico, Mongolia, Taiwan, and Turkmenistan show strong statistically significant patterns regarding the magnitude of an earthquake. Indeed, combined with common knowledge, e.g., Japan happens to be known for its pattern in high earthquake magnitudes. The model reveals that Japan has earthquakes that are on average 32.4% at a stronger magnitude than in other countries.
+<br>
+
+**Evaluation**
+
+The summary shows that the dispersion parameter is lower than 1. This implies that the variance increases slower than linearly. xxxxx
+<br>
+
+```{r warning = FALSE}
+plot(glm.fit, which = 2)
+```
+<br>
+
+
+The Q-Q Plot of the model shows no consistent lay-offs which would speak for a moderate fit. However, summarizing the analysis of this model, the residual deviance and its degrees of freedom differ greatly which is problematic. Therefore, in order to be able to fit a model on the magnitudes of an earthquake which shows high accuracy, more extensive data about factors that have an influential role on a magnitude should be considered. Further research has shown that these variables could be the intrinsic quality (coefficient of friction in the rock), the rupture area (whether the epicenter is in a subduction zone), the average displacement across the rupture area, and the directivity (energy release in the direction of movement).
+<br>
+
+```{r}
+#Esin: that's the LM that I mentioned in the chat
+#try lm
+# lm.fit <- lm(sqrt(Deaths) ~ Focal.Depth..km. + factor(Mag)+ + factor(Country) + factor(MMI.Int) , data = eqdata)
+# summary(lm.fit)
+# 
+# plot(lm.fit)
+
+```
+
+
+## 5. Generalised Linear Model set to Binomial <a name="Generalised Linear Model set to Binomial"></a>
+
+
+<br>
+
+### 5.1. Characteristics of a GLM set to Binomial
+
+
+<br>
+
+### 5.2. Research Question
+
+
+<br>
+
+### 5.3. Fitting the Binomial GLM
+
+
+<br>
+
+### 5.4. Model Interpretation and Evaluation
+
+
+<br>
+
+## 6. Generalised Additive Model <a name="Generalised Additive Model"></a>
+
+### 6.1. Characteristics of a GAM <a name="Characteristics of a GAM"></a>
+
+GAM is the model that are the extension to smoothing splines and enables to fit models which contain several predictors simultaneously. Advantages of a gam model are, modelling non linear relationships, modelling multiple predictors and interaction effects, further on, gam is also a robust model for handling outliers. 
+
+**Difference Generalized Linear Model (GLM) vs. Generalized Additive Model (GAM)**
+
+GAM does not assume a priori any specific form of this relationship, therefore can be used to reveal and estimate non-linear effects of the covariate on the dependent variable. GAMs assume that the relationship between the response variable and predictors is additive, meaning that the effect of each predictor is independent of the others. 
+
+This allows for more flexibility in modeling complex relationships without explicitly specifying interactions. GAMs can accommodate both continuous and categorical predictor variables. Categorical variables are typically represented by dummy variables or factor levels.
+
+<br>
+
+### 6.2. Research Question <a name="Research Question"></a>
+
+Given the flexibility of the GAM model,in this section we will fit a GAM model to see how magnitude, intensity, focal debt and regional differences are influencing the levels of number of death caused by an earthquake.
+We aim with our model to be able to make predictions for the future.
+
+**Assessing the predictive performance of a model: Cross validation**
+
+In-sample or out-of-sample performance:
+In sample validation means that we fit all data in the model. We can use in simple models, this is why we used it in the multiple regression model. 
+
+Out-of-sample: means that we split the data in order to cross validate or model on predictive performance. This method we will be using with our GAM model, in order we can cross validate the fitted models in the end and on this way overcome the overfitting issue in our models.
+
+Cross validation is especially important if we are building predictive models, and would like to validate the predictive performance of the model. 
+
+In the previous chapters we were doing explanatory analysis about the response variables influencing the magnitude of an earthquake. In this chapter we will fit a model to predict the caused total deaths expected based on Magnitude, Intensity, Focal depth and Country.
+
+<br>
+
+```{r GAM split Train-Test data, eval=TRUE, echo=FALSE, error=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+
+set.seed(123)
+
+
+for(i in 1:10^2){
+  train.YES <- sample(x = c(TRUE, FALSE), size = nrow(eqdata), replace = TRUE)
+gam.eqdata.train <- eqdata[train.YES, ]
+gam.eqdata.test <- eqdata[!train.YES, ]}
+
+sum(is.na(gam.eqdata.train$Death.Description))
+sum(is.na(gam.eqdata.train$Deaths))
+
+```
+
+<br>
+
+### 6.3. Fitting a GAM <a name="Fitting a GAM"></a>
+
+In our data set we have 2 variables indicating the death numbers caused by an earthquake one with the count numbers, one with categorical levels calculated from these numbers.
+
+We will be setting 2 models with setting each of them as response variable:
+
+**1. Variable: Death.Description is a categorical variable with 4 levels:**      
+
+We will use the family multinom() given we have a categorical response variable.  
+
+Remarks to optimization:    
+ - Magnitude in smoothing function had the edf value 1 therefore we have optimized our model and adding it as a simple linear regression to our model.  
+ - Given the variables Latitude had the edf value 1 therefore we have optimized our model and adding it as a simple linear regression to our model.  
+
+**Interpretation:**
+
+The summary output indicates that there there is no evidence that Longitude and Focal depth have non-linear effect on the response variable. There is a strong evidence, that the value of magnitude Magnitude and the levels 10 and 11 from Intensity have a strong influence on the number of death caused by an earthquake. 
+
+Further on we can see that certain countries where the evidence of having higher number of deaths seems to be more likely. This may be explained by the higher intensity levels of the earthquakes noted i these countries as well, by the robustness of the infrastructure, which is quite diverse in the indicated countries. 
+
+Our model explains in 58.2% of the overall variability indicated by the R-squared value. 
+
+<br>
+
+<button type="button" class="collapsible">**Results of Fitting the GAM 1 (interactive drop down button)**</button>
+<div class="content">
+  <p>
+
+```{r fitting GAM1.1 death , eval=TRUE, echo=FALSE, error=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+
+library("mgcv")
+
+gam.death2 <- gam(Death.Description ~ Mag + factor(MMI.Int) + s(Focal.Depth..km.) + Country + s(Longitude) + Latitude, data = gam.eqdata.train, familiy = multinom(K=4))
+
+summary(gam.death2)
+```
+  </p>
+</div>
+<br>
+
+```{r fitting GAM1.2 death , eval=TRUE, echo=FALSE, error=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+
+par(mfrow=c(1,2))
+plot(gam.death2)
+
+#gam.check(gam.death2)
+
+```
+
+<br>
+
+**2. Variable: Deaths is a count variable:**  
+
+We will use family = "quasipoisson" given our response valuable is a count data, we need a link with log function.
+
+Remark:
+Magnitude in smoothing function had the edf value 1 therefore we are adding it as a simple linear regression to our model.
+
+**Interpretation:**
+
+This model with the count numbers seems to be better explaining the overall variability (93%).
+The summary output indicates that there there is strong evidence that latitude, longitude and focal depth have a non-linear effect on the response variable, the number of deaths caused by an earthquake. The estimated degrees of freedom, edf in the output, seems to be quite high all the 3 predictors, close to the value 9.
+
+In this model there seems to be a high number of countries where is a strong evidence that an earthquake will cause deaths, however we can also see that all the levels of the intensity scale above 7 is also strongly indicating to contribute to the increase of death numbers. This may be the reason, that in case of so many countries we see a strong relationship.
+
+<br>
+
+<button type="button" class="collapsible">**Results of Fitting the GAM 2 (interactive drop down button)**</button>
+<div class="content">
+  <p>
+
+```{r fitting GAM2.1 death.total , eval=TRUE, echo=FALSE, error=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+
+gam.deaths <- gam( Deaths  ~ Mag + factor(MMI.Int) +s(Focal.Depth..km.) + s(Longitude) + s(Latitude) + Country, data = gam.eqdata.train, family = "quasipoisson")
+
+summary(gam.deaths)
+
+```
+  </p>
+</div>
+<br>
+
+```{r fitting GAM2.2 death.total , eval=TRUE, echo=FALSE, error=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+par(mfrow=c(2,2))
+plot(gam.deaths)
+
+#gam.check(gam.deaths)
+
+```
+
+<br>
+
+
+### 6.4. Model Interpretation and Evaluation <a name="Model Interpretation and Evaluation"></a>
+
+Given our results we can conclude, that the second model, with the count numbers seems to explain the variability in a higher proportion. Based on this model we have a strong evidence that the Magnitude, Intensity as well as the location (Country, Longitude and Latitude) have a joint effect on our response variable, the total number of deaths.
+
+```{r fitting GAM Eval , eval=TRUE, echo=FALSE, error=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+predicted.gam <- predict(gam.deaths, newdata= gam.eqdata.test, type="response")
+cor(predicted.gam,eqdata$Deaths)^2
+```
+<br>
+
+## 7. Neural Network <a name="Neural Network"></a>
+
+<br>
+
+## 8. Support Vector Machine <a name="Support Vector Machine"></a>
+
+```{r svm_1, echo=FALSE}
+library(e1071) # for SVM model
+library(caret) # for data splitting
+library(dplyr) # for data manipulation
+library(ggplot2) # for data visualization
+
+data <- eqdata
+
+data$Tsu <- ifelse(is.na(data$Tsu), "No", "Yes")
+data$Vol <- ifelse(is.na(data$Vol), "No", "Yes")
+no_count <-  table(data$Tsu)["No"]
+data$Type <- ifelse(data$Tsu == "Yes" & data$Vol == "Yes", "Both",
+                        ifelse(data$Tsu == "Yes", "Tsunami",
+                               ifelse(data$Vol == "Yes", "Volcano", "Neither")))
+
+# Convert "Type" to a factor with three levels
+data$Type <- factor(data$Type, levels = c("Tsunami", "Volcano", "Both", "Neither"))
+
+# Plot data
+ggplot(data, aes(x = Year, y = Mag, color = Type)) +
+  geom_point()
+
+set.seed(123)
+indices <- createDataPartition(data$Type, p=.85, list = F)
+
+train <- data %>%
+  slice(indices)
+test_in <- data %>%
+  slice(-indices) %>%
+  select(-Type)
+test_truth <- data %>%
+  slice(-indices) %>%
+  pull(Type)
+
+set.seed(123)
+data_svm <- svm(Type ~ Mag + Year, train, kernel = "radial", scale = TRUE, cost = 10)
+
+summary(data_svm)
+
+plot(data_svm, train, Mag ~ Year)
+
+```
+
+<br>
+
+## 9. Optimisation Problem <a name="Optimisation Problem"></a>
+
+<br>
+
+**Assessing the predictive performance of a model: Cross validation**
+In-sample or out-of-sample performance:
+In sample: if we use all data in our model
+Out-of-sample: if we split the data in otder to cross validate or model on predictive performance.
+
+Random splitting procedure is better in terms of performance and overcome overfitting: 
+
+
+
+<br>
+
+## 10. Conclusion <a name="Conclusion"></a>
+
+<br>
+
+
+
+
+<!--
+=========================================
+  Machinery for the collapsible sections.
+=========================================
+
+  References:
+  -----------
+  https://www.w3schools.com/howto/howto_js_collapsible.asp
+https://www.w3schools.com/howto/tryit.asp?filename=tryhow_js_collapsible
+-->
+  
+  <style>
+  .collapsible {
+    background-color: #2874A6;
+      color: white;
+    cursor: pointer;
+    padding: 10px;
+    width: 100%;
+    border: none;
+    text-align: left;
+    outline: none;
+    font-size: 15px;
+  }
+
+.active, .collapsible:hover {
+  background-color: #2874A6;
+}
+
+.content {
+  padding: 0 18px;
+  display: none;
+  overflow: hidden;
+  background-color: #D6EAF8;
+}
+</style>
+  
+  
+  <script>
+  var coll = document.getElementsByClassName("collapsible");
+var i;
+
+for (i = 0; i < coll.length; i++) {
+  coll[i].addEventListener("click", function() {
+    this.classList.toggle("active");
+    var content = this.nextElementSibling;
+    if (content.style.display === "block") {
+      content.style.display = "none";
+    } else {
+      content.style.display = "block";
+    }
+  });
+}
+</script>

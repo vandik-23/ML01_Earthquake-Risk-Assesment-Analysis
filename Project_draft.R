@@ -4,13 +4,94 @@ eqdata <- read.csv("significant-earthquake-database.tsv", header = TRUE, sep = "
 
 library("dplyr")
 
-eqdata <- eqdata %>% filter(Year >= 1800)
+eqdata <- eqdata %>% filter(Year >= 1900)
 eqdata <- eqdata %>% filter(!is.na(Mag))
-sum(is.na(eqdata$Mag))
+eqdata <- eqdata %>% filter(!is.na(Deaths))
+eqdata$Mag.full <- floor(eqdata$Mag)
+sum(is.na(eqdata$Deaths))
 
 
-plot(Total.Deaths ~ Year, data = eqdata)
+eqdata.no.na.total.death <- eqdata %>%
+  filter(!is.NA(eqdata$Location.Name))%>%
+  str_split(eqdata$Location.Name,OR(":"," "))
 
+# Piping total death to remove NAs from columns total death, magnitude,intensity and focal depth
+
+eqdata.no.na.total.death <- eqdata %>%
+  select(Year, Total.Deaths,Total.Death.Description,Mag, MMI.Int, Focal.Depth..km., Vol, Tsu, Location.Name, Longitude, Latitude)%>%
+  filter(!is.na(Total.Deaths))%>%
+  filter(!is.na(MMI.Int))%>%
+  filter(!is.na(Focal.Depth..km.))
+
+head(eqdata.no.na.total.death)
+names(eqdata)
+
+
+plot(Mag ~ factor(Year), data = eqdata)
+plot(Mag ~ Latitude, data = eqdata)
+plot(Mag ~ Longitude, data = eqdata)
+plot(Mag ~ Focal.Depth..km., data = eqdata)
+plot(Mag ~ factor(MMI.Int), data = eqdata)
+plot(Mag ~ Total.Deaths, data = eqdata)
+
+hist_mag <- ggplot(data = eqdata,
+                   aes(x=0)) + 
+  geom_histogram()
+
+
+
+hist_int <- ggplot(data = eqdata,
+                   aes(x=MMI.Int)) + 
+  geom_histogram(aes(y = ..density..), color="black", fill="lightblue")+
+  geom_density(lwd = 1.2,
+               linetype = 1,
+               colour = 2)
+
+hist_int
+
+
+
+######################################################################
+#New Try Linear Regression:
+
+ #Outcome continuous variable -> magnitude
+
+# Magnitude and intensity: 
+plot(Mag ~ factor(MMI.Int),data = eqdata)
+
+plot(log(Total.Deaths)~ Mag,data = eqdata)
+plot(log(Total.Deaths)~ factor(MMI.Int),data = eqdata)
+plot(log(Total.Deaths)~ Focal.Depth..km.,data = eqdata)
+plot(log(Total.Deaths)~ Longitude,data = eqdata)
+
+lm.death <- lm(log(Total.Deaths) ~ Mag,data = eqdata)
+summary(lm.death)
+exp(1.01668)
+exp(-3.72601)
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+######################################################################
 
 # There are no na values in Magnitude as we have filtered out those already.
 
@@ -41,36 +122,6 @@ str(eqdata.no.na.total.death)
 lm.all <- lm(Total.Deaths ~ Mag + MMI.Int + Focal.Depth..km. + Year + Vol + Tsu + Latitude + Longitude, data = eqdata.no.na.total.death)
 summary(lm.all)
 coef(lm.all)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Piping total damage to remove NAs from columns total damage, magnitude,intensity and focal depth
-
-eqdata.no.na.total.damage <- eqdata %>%
-  select(Year, Total.Damage...Mil.,Total.Damage.Description,Mag, MMI.Int, Focal.Depth..km.)%>%
-  filter(!is.na(Total.Damage...Mil.))%>%
-  filter(!is.na(MMI.Int))%>%
-  filter(!is.na(Focal.Depth..km.))
-
-#Our filtered data set contains so many rows:
-linear.count.rows.damage <- sum(!is.na(eqdata.no.na.total.damage$Total.Damage...Mil.))
-
-str(eqdata.no.na.total.damage)
 
 
 # Plot Magnitude vs. Total Death
@@ -116,7 +167,7 @@ ggplot(eqdata.no.na.total.death,aes(MMI.Int, Total.Deaths))+
   geom_boxplot()+
   aes(group = MMI.Int)+
   geom_point(aes(colour = factor(MMI.Int)), size = 4)
-  
+
 
 ggplot(eqdata.no.na.total.death,aes(MMI.Int,Total.Deaths)) +
   geom_point() +
@@ -143,6 +194,76 @@ lm.all <- lm(Total.Deaths ~ Mag + MMI.Int + Focal.Depth..km. + Year + Vol + Tsu,
 summary(lm.all)
 coef(lm.all)
 
+
+
+
+
+
+#############################3DAMAGE#################################33
+
+
+# Piping total damage to remove NAs from columns total damage, magnitude,intensity and focal depth
+
+eqdata.no.na.total.damage <- eqdata %>%
+  select(Year, Total.Damage...Mil.,Total.Damage.Description,Mag, MMI.Int, Focal.Depth..km., Vol, Tsu, Location.Name, Longitude, Latitude)%>%
+  filter(!is.na(Total.Damage...Mil.))%>%
+  filter(!is.na(MMI.Int))%>%
+  filter(!is.na(Focal.Depth..km.))%>%
+  mutate_at(c("Vol", "Tsu"), ~replace_na(., 0))
+
+#Our filtered data set contains so many rows:
+linear.count.rows.damage <- sum(!is.na(eqdata.no.na.total.damage$Total.Damage...Mil.))
+
+str(linear.count.rows.damage)
+
+
+
+```{r linear regression fit model death6, message = FALSE, error = FALSE, warning = FALSE, eval = TRUE, echo = FALSE, include = TRUE}
+
+coef(lm.all.death6)
+
+```
+
+<br>
+  
+  ```{r linear regression fit model damage1, message = FALSE, error = FALSE, warning = FALSE, eval = TRUE, echo = FALSE, include = TRUE}
+
+lm.all.damage <- lm(Total.Damage...Mil. ~ Mag + MMI.Int + Focal.Depth..km. + Year + Vol + Tsu + Latitude + Longitude, data = eqdata.no.na.total.damage)
+summary(lm.all.damage)
+
+```
+
+<br>
+  
+  ```{r linear regression fit model damage2, message = FALSE, error = FALSE, warning = FALSE, eval = TRUE, echo = FALSE, include = TRUE}
+
+coef(lm.all.damage)
+
+```
+
+```{r linear regression 3, message = FALSE, error = FALSE, warning = FALSE, eval = TRUE, echo = FALSE, include = TRUE}
+
+
+# Plot Magnitude vs. Total Damage
+
+ggplot(eqdata.no.na.total.damage,aes(Mag,Total.Damage...Mil.)) +
+  geom_point() +
+  geom_smooth(method='lm',se=FALSE)
+
+```
+
+<br>
+  
+  ```{r linear regression 4, message = FALSE, error = FALSE, warning = FALSE, eval = TRUE, echo = FALSE, include = TRUE}
+
+
+# Plot Intensity vs. Total Damage
+
+ggplot(eqdata.no.na.total.damage,aes(MMI.Int,Total.Damage...Mil.)) +
+  geom_point() +
+  geom_smooth(method='lm',se=FALSE)
+
+```
 
 
 
