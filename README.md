@@ -1,5 +1,7 @@
 **Global Risk Assessment of Earthquakes and Effects**
 
+![Earthquakes](https://github.com/vandik-23/ML01_Earthquake-Risk-Assesment-Analysis/blob/main/images/Map_earthquakes.png)
+
 **Authors:**\
 E.Isik, S. Rigo, A. Viczian
 
@@ -25,3 +27,4 @@ Available under: https://www.ngdc.noaa.gov/hazel/view/hazards/earthquake/event-d
 
 **Contributing:**\
 The significant earthquake database poses various opportunities to optimize the risk mitigation of earthquake after-effects. However, this database alone should not be used to produce prediction models as it also contains sparse and incomplete information. Therefore, determining additional data that adds value to this extensive database could bring promising outcomes. Complementing this dataset with further inputs and other relevant variables such as population numbers and further relevant socio-economic factors may contribute to improve the future predictions in terms of estimated death and damage.
+
